@@ -1,0 +1,35 @@
+import os
+import json
+from typing import Final
+
+DIR_NAME = os.path.join(os.path.dirname(__name__),'ABIS')
+
+
+
+CHAINLINK_ORACLES_CONTRACTS: Final[dict[str, str]] = {
+    'ETH-USD':'0x5bc7Cf88EB131DB18b5d7930e793095140799aD5',
+    'MNT-USD': '0xD97F20bEbeD74e8144134C4b148fE93417dd0F96',
+    'USDT-USD':'0xd86048D5e4fe96157CE03Ae519A9045bEDaa6551'
+}
+
+ABIS = {
+    'ERC20':'ERC20.json',
+    'ETH-USD':'ETH-USD.json',
+    'MNT-USD':'MNT-USD.json',
+    'USDT-USD':'USDT-USD.json',
+}
+
+
+def load_path(path:str):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f'This Path doesnt Exist {path}')
+    
+    with open(path, 'r',encoding='utf-8') as file:
+        return  json.load(file)
+
+def load_abis():
+    abis = {}
+    for abi_name, abi_file in ABIS.items():
+        abis[abi_name] = load_path(os.path.join(DIR_NAME,abi_file))
+    return abis
+
