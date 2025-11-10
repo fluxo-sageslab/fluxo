@@ -10,6 +10,7 @@ from .risk import router as risk_router
 from .x402 import router as x402_router
 from .yield_opportunity import router as yield_router
 from .social import router as social_router
+from .alerts import router as alerts_router
 
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     'risk_router',
     'x402_router',
     'yield_router',
-    'social_router'
+    'social_router',
+    'alerts_router'
 ]
