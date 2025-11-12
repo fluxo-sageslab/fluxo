@@ -52,7 +52,8 @@ class Redisconnect:
     def get_connector():
         return get_redis_connector()
 
-REDIS_CONNECT = Redisconnect().redis_db
+# Initialize REDIS_CONNECT lazily
+REDIS_CONNECT = None  # Use get_redis_connector() for new code
 
 DEFILLAMA_URL_ENDPOINTS: Final[dict[str, str]] = {
     'protocols': 'https://api.llama.fi/protocols',
