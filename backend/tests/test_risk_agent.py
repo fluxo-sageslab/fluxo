@@ -287,7 +287,10 @@ class TestRiskAgent:
         assert concentration == 100, "Single asset should always be 100% concentration"
 
 
-@pytest.mark.asyncio
+class TestRiskAgentIntegration:
+    """Integration tests for Risk Agent with other components"""
+    
+    @pytest.mark.asyncio
     async def test_risk_analysis_with_alerts(self):
         """Integration test with alert manager - temporarily skipped"""
         pytest.skip("Skipping due to circular import - refactoring needed")
