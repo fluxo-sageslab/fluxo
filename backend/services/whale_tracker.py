@@ -1,22 +1,18 @@
 """
-Whale Tracker Service - Multi-Source Support
-Supports multiple data sources with fallback options
+Whale Tracker Service - Enhanced with Alert Triggering
 """
-
 from typing import List, Optional, Dict
 from datetime import datetime
 from enum import Enum
 import logging
 
-logger = logging.getLogger(_name_)
+logger = logging.getLogger(__name__)
 
 
 class DataSource(str, Enum):
     """Available whale data sources"""
     MOCK = "mock"
     DUNE = "dune"
-    FLIPSIDE = "flipside"
-    WHALE_ALERT = "whale_alert"
     NANSEN = "nansen"
 
 
@@ -60,90 +56,48 @@ class WhaleMovement:
             "impact_score": self.impact_score,
             "data_source": self.data_source
         }
+    
+    def should_alert(self, user_threshold: float = 1000000) -> bool:
+        """Check if this movement warrants an alert"""
+        return self.usd_value >= user_threshold and self.impact_score >= 7.0
 
 
 class WhaleTracker:
     """
-    Multi-source whale movement tracker
-    
-    Supports (in priority order):
-    1. Dune Analytics (primary)
-    2. Flipside Crypto (backup)
-    3. Mock data (testing)
-    
-    Not yet supported (Week 2+):
-    - Nansen (if budget approved)
-    - Whale Alert (no Mantle support)
+    Multi-source whale movement tracker with alert integration
     """
     
-    def _init_(self, 
+    def __init__(self, 
                  primary_source: DataSource = DataSource.MOCK,
                  api_keys: Optional[Dict[str, str]] = None):
         """
-        Initialize whale tracker with data source
+        Initialize whale tracker
         
         Args:
             primary_source: Primary data source to use
-            api_keys: Dict of API keys {"dune": "key", "flipside": "key"}
+            api_keys: Dict of API keys {"dune": "key", "nansen": "key"}
         """
         self.primary_source = primary_source
         self.api_keys = api_keys or {}
-        self.min_threshold_usd = 100_000
+        self.min_threshold_usd = 100_000  # Track movements > $100K
         
-        # Track which sources are available
-        self.available_sources = self._check_available_sources()
-        
-        logger.info(f"WhaleTracker initialized")
-        logger.info(f"Primary source: {primary_source}")
-        logger.info(f"Available sources: {self.available_sources}")
-    
-    def _check_available_sources(self) -> List[str]:
-        """Check which data sources are configured"""
-        available = [DataSource.MOCK]  # Always available
-        
-        if self.api_keys.get("dune"):
-            available.append(DataSource.DUNE)
-        if self.api_keys.get("flipside"):
-            available.append(DataSource.FLIPSIDE)
-        if self.api_keys.get("whale_alert"):
-            available.append(DataSource.WHALE_ALERT)
-        
-        return [s.value for s in available]
+        logger.info(f"WhaleTracker initialized (source: {primary_source})")
     
     async def get_recent_movements(
         self,
         timeframe: str = "24h",
         min_value_usd: Optional[float] = None
     ) -> List[WhaleMovement]:
-        """
-        Get recent whale movements from configured source
+        """Get recent whale movements"""
         
-        Falls back to next available source if primary fails
-        """
-        sources_to_try = [
-            self.primary_source,
-            DataSource.DUNE,
-            DataSource.FLIPSIDE,
-            DataSource.MOCK  # Always fallback to mock
-        ]
+        if self.primary_source == DataSource.MOCK:
+            return self._get_mock_movements()
+        elif self.primary_source == DataSource.DUNE:
+            return await self._fetch_from_dune(timeframe, min_value_usd)
+        elif self.primary_source == DataSource.NANSEN:
+            return await self._fetch_from_nansen(timeframe, min_value_usd)
         
-        for source in sources_to_try:
-            try:
-                if source == DataSource.MOCK:
-                    return self._get_mock_movements()
-                elif source == DataSource.DUNE:
-                    if self.api_keys.get("dune"):
-                        return await self._fetch_from_dune(timeframe, min_value_usd)
-                elif source == DataSource.FLIPSIDE:
-                    if self.api_keys.get("flipside"):
-                        return await self._fetch_from_flipside(timeframe, min_value_usd)
-            except Exception as e:
-                logger.warning(f"Source {source} failed: {e}. Trying next...")
-                continue
-        
-        # If all fail, return mock
-        logger.warning("All sources failed. Using mock data.")
-        return self._get_mock_movements()
+        return []
     
     def _get_mock_movements(self) -> List[WhaleMovement]:
         """Mock whale movements for testing"""
@@ -180,15 +134,76 @@ class WhaleTracker:
         ]
     
     async def _fetch_from_dune(self, timeframe: str, min_value: Optional[float]) -> List[WhaleMovement]:
-        """Fetch from Dune Analytics - TODO Week 2"""
-        raise NotImplementedError("Dune integration pending Week 2")
+        """Fetch from Dune Analytics - TODO Week 3"""
+        raise NotImplementedError("Dune integration pending Week 3")
     
-    async def _fetch_from_flipside(self, timeframe: str, min_value: Optional[float]) -> List[WhaleMovement]:
-        """Fetch from Flipside Crypto - TODO Week 2"""
-        raise NotImplementedError("Flipside integration pending Week 2")
+    async def _fetch_from_nansen(self, timeframe: str, min_value: Optional[float]) -> List[WhaleMovement]:
+        """Fetch from Nansen - TODO Week 3"""
+        raise NotImplementedError("Nansen integration pending Week 3")
+    
+    async def check_whale_alerts(self, movements: List[WhaleMovement]) -> List['Alert']:
+        """
+        Check whale movements and create alerts for significant ones
+        
+        Args:
+            movements: List of whale movements to check
+        
+        Returns:
+            List of Alert objects for significant movements
+        """
+        # Lazy import to avoid circular dependency
+        from api.models.alerts import Alert, AlertType, AlertSeverity
+        import uuid
+        
+        alerts = []
+        
+        for movement in movements:
+            if movement.should_alert():
+                # Determine severity based on impact
+                if movement.impact_score >= 9:
+                    severity = AlertSeverity.CRITICAL
+                    emoji = "🚨"
+                elif movement.impact_score >= 7:
+                    severity = AlertSeverity.HIGH
+                    emoji = "🐋"
+                else:
+                    severity = AlertSeverity.WARNING
+                    emoji = "⚠"
+                
+                # Create alert
+                alert = Alert(
+                    alert_id=str(uuid.uuid4()),
+                    alert_type=AlertType.WHALE_MOVEMENT,
+                    severity=severity,
+                    title=f"{emoji} Large {movement.token} Movement Detected",
+                    message=(
+                        f"Whale moved {movement.amount:,.2f} {movement.token} "
+                        f"(${movement.usd_value:,.0f}). "
+                        f"From {movement.from_address[:10]}... "
+                        f"to {movement.to_address[:10]}... "
+                        f"Impact score: {movement.impact_score}/10"
+                    ),
+                    wallet_address=None,  # Global alert, not user-specific
+                    current_value=movement.usd_value,
+                    threshold=1000000,
+                    details={
+                        "tx_hash": movement.tx_hash,
+                        "token": movement.token,
+                        "amount": movement.amount,
+                        "from": movement.from_address,
+                        "to": movement.to_address,
+                        "impact_score": movement.impact_score
+                    },
+                    triggered_by="whale_tracker"
+                )
+                
+                alerts.append(alert)
+                logger.info(f"Created whale alert: ${movement.usd_value:,.0f} {movement.token}")
+        
+        return alerts
     
     def get_summary(self, movements: List[WhaleMovement]) -> dict:
-        """Generate summary with source information"""
+        """Generate summary with alert count"""
         if not movements:
             return {
                 "total_movements": 0,
@@ -198,8 +213,8 @@ class WhaleTracker:
         
         total_volume = sum(m.usd_value for m in movements)
         high_impact = [m for m in movements if m.impact_score >= 7.0]
+        alertable = [m for m in movements if m.should_alert()]
         
-        # Group by source
         by_source = {}
         for m in movements:
             by_source[m.data_source] = by_source.get(m.data_source, 0) + 1
@@ -208,11 +223,12 @@ class WhaleTracker:
             "total_movements": len(movements),
             "total_volume_usd": total_volume,
             "high_impact_movements": len(high_impact),
+            "alertable_movements": len(alertable),
             "sources_used": by_source,
             "primary_source": self.primary_source.value,
             "summary": (
                 f"{len(movements)} whale movements from {self.primary_source.value}. "
                 f"Total volume: ${total_volume:,.0f}. "
-                f"{len(high_impact)} high-impact transactions."
+                f"{len(alertable)} movements warrant alerts."
             )
         }
