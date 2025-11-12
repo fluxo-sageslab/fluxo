@@ -39,9 +39,18 @@ class Settings(BaseSettings):
     )
 
 
+# Lazy loading helper for Redis connection
+def get_redis_connector():
+    """Get Redis connector instance (lazy import to avoid circular dependency)"""
+    from models.redis_connect import db_connector
+    return db_connector(max_connections=5)
+
+# Legacy Redisconnect class for backward compatibility
 class Redisconnect:
-   redis_connector = db_connector(max_connections=5)
-   redis_db = redis_connector.get_connection()
+    """Deprecated: Use get_redis_connector() function instead"""
+    @staticmethod
+    def get_connector():
+        return get_redis_connector()
 
 REDIS_CONNECT = Redisconnect().redis_db
 
