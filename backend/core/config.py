@@ -23,14 +23,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = BASE_DIR / '.env'
 
 class Settings(BaseSettings):
-    celery_broker_url: str 
-    dune_api_key: str 
-    database_url: str
-    admin_email: str 
-    redis_host:str
-    redis_port:int
-    redis_password:str
-
+    celery_broker_url: str = "redis://localhost:6379/0"
+    dune_api_key: str = "dummy_key_for_testing"
+    database_url: str = "sqlite:///./fluxo.db"
+    admin_email: str = "admin@fluxo.com"
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_password: str = ""
 
     model_config = SettingsConfigDict(
         env_file=ENV_PATH,
@@ -71,13 +70,3 @@ DUNE_SERVICE_ENDPOINTS : Final[dict[str, str]] = {
 MANTLE_RPC_URL = 'https://mantle.drpc.org'  # This is a public RPC endpoint for Mantle
 MANTLE_WSS_URL = 'wss://mantle.drpc.org'  # WebSocket endpoint for Mantle
 
-
-
-# Lazy loading function to avoid circular imports
-def get_redis_connector():
-    """Get Redis connector instance (lazy import to avoid circular dependency)"""
-    from models.redis_connect import db_connector
-    return db_connector
-
-# Legacy compatibility
-REDIS_CONNECT = None  # Use get_redis_connector() instead
