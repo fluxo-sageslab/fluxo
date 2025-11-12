@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 from typing import Final
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from models.redis_connect import db_connector
+# from models.redis_connect import db_connector
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = BASE_DIR / '.env'
@@ -60,3 +60,14 @@ DUNE_SERVICE_ENDPOINTS : Final[dict[str, str]] = {
 
 MANTLE_RPC_URL = 'https://mantle.drpc.org'  # This is a public RPC endpoint for Mantle
 MANTLE_WSS_URL = 'wss://mantle.drpc.org'  # WebSocket endpoint for Mantle
+
+
+
+# Lazy loading function to avoid circular imports
+def get_redis_connector():
+    """Get Redis connector instance (lazy import to avoid circular dependency)"""
+    from models.redis_connect import db_connector
+    return db_connector
+
+# Legacy compatibility
+REDIS_CONNECT = None  # Use get_redis_connector() instead
