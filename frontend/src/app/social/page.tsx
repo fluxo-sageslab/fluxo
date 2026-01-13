@@ -1,395 +1,296 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import {
   MessageSquare,
   TrendingUp,
-  TrendingDown,
   Twitter,
   Search,
-  RefreshCw,
-  ThumbsUp,
-  ThumbsDown,
-  Minus,
-  Hash,
   Loader2,
   AlertTriangle,
+  User,
+  Heart,
+  Repeat2,
+  MessageCircle,
+  Hash,
+  Sparkles,
 } from 'lucide-react';
-import { formatCompactNumber, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useSocialSentiment } from '@/hooks/useFluxo';
 
-const getSentimentColor = (sentiment: number) => {
-  if (sentiment >= 0.6) return 'text-green-500';
-  if (sentiment >= 0.4) return 'text-yellow-500';
-  return 'text-red-500';
-};
-
-const getSentimentBg = (sentiment: number) => {
-  if (sentiment >= 0.6) return 'bg-green-500';
-  if (sentiment >= 0.4) return 'bg-yellow-500';
-  return 'bg-red-500';
-};
-
-interface PlatformData {
-  platform: string;
-  sentiment: number;
-  volume: number;
-  change_24h: number;
+interface TrendingTopic {
+  text: string;
+  score: number;
 }
 
-interface TrendingToken {
-  symbol: string;
-  sentiment: number;
-  mentions: number;
-  change: number;
-}
-
-interface RecentPost {
+interface RecentTweet {
   platform: string;
-  author: string;
-  content: string;
-  sentiment: string;
-  time: string;
+  text: string;
+  created_at: string;
+  author_id: string;
+  author_name: string;
+  author_followers: number;
+  likes: number;
+  retweets: number;
+  replies: number;
 }
 
 export default function SocialPage() {
-  const [searchToken, setSearchToken] = useState('MNT');
-  const [activeToken, setActiveToken] = useState('MNT');
-  const { sentiment: result, isLoading: isAnalyzing, error, refetch: analyze } = useSocialSentiment();
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-
-  // Initial load
-  useEffect(() => {
-    const init = async () => {
-      await analyze();
-      setIsInitialLoad(false);
-    };
-    init();
-  }, [analyze]);
+  const [tokenInput, setTokenInput] = useState('MNT');
+  const [activeToken, setActiveToken] = useState('');
+  const { sentiment: result, isLoading, error, refetch } = useSocialSentiment();
 
   const handleAnalyze = async () => {
-    setActiveToken(searchToken);
-    await analyze();
+    if (!tokenInput.trim()) return;
+    setActiveToken(tokenInput.toUpperCase());
+    await refetch(tokenInput.toUpperCase());
   };
 
-  // Extract data from API response
-  const sentiment = result as {
-    token_symbol?: string;
-    overall_sentiment?: number;
-    sentiment_label?: string;
-    platforms?: PlatformData[];
-    trending_topics?: string[];
-    trending_tokens?: TrendingToken[];
-    recent_posts?: RecentPost[];
-    timestamp?: string;
-  } | null;
+  // Extract narratives data from result
+  const narratives = result?.narratives;
+  const trendingTopics: TrendingTopic[] = narratives?.trending_topics || [];
+  const recentTweets: RecentTweet[] = narratives?.recent_tweets || [];
+  const tokenSymbol = result?.token_symbol || activeToken;
 
-  const overallSentiment = sentiment?.overall_sentiment ?? 0.5;
-  const sentimentLabel = sentiment?.sentiment_label ?? 'neutral';
-  const platforms = sentiment?.platforms ?? [];
-  const trendingTopics = sentiment?.trending_topics ?? [];
-  const trendingTokens = sentiment?.trending_tokens ?? [];
-  const recentPosts = sentiment?.recent_posts ?? [];
-  const totalVolume = platforms.reduce((sum: number, p: PlatformData) => sum + (p.volume || 0), 0);
+  return (
+    <div className="space-y-6 animate-fade-in pb-12">
+      {/* Header with Input */}
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-background via-muted/20 to-primary/5 p-8 md:p-12 shadow-2xl">
+        <div className="absolute inset-0 pattern-grid opacity-10" />
 
-  if (isInitialLoad && isAnalyzing) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Social Sentiment</h1>
-            <p className="text-muted-foreground mt-1">AI-powered social media analysis</p>
+        <div className="relative z-10 space-y-6">
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="px-4 py-1.5 border-primary/40 bg-primary/10 text-primary font-[family-name:var(--font-vt323)] text-xl tracking-widest uppercase">
+              SOCIAL INTEL v2.0
+            </Badge>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">STREAMING LIVE</span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none uppercase italic">
+              Social <span className="text-primary">Narratives</span>
+            </h1>
+            <p className="max-w-2xl text-sm md:text-base text-muted-foreground font-medium leading-relaxed opacity-80">
+              Real-time social sentiment analysis tracking trending narratives, community discussions, and market sentiment across platforms.
+            </p>
+          </div>
+
+          {/* Token Input */}
+          <div className="flex gap-3 max-w-md">
+            <Input
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value.toUpperCase())}
+              placeholder="Enter token symbol (e.g., USDC, BTC, ETH)"
+              className="bg-background/50 border-primary/30 focus:border-primary input-glass"
+              onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
+            />
+            <Button
+              onClick={handleAnalyze}
+              disabled={isLoading || !tokenInput.trim()}
+              className="px-6 bg-primary hover:bg-primary/90"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Analyzing
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Analyze
+                </>
+              )}
+            </Button>
           </div>
         </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-24">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Analyzing social sentiment...</p>
-          </CardContent>
-        </Card>
       </div>
-    );
-  }
 
-  if (error && !result) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Social Sentiment</h1>
-            <p className="text-muted-foreground mt-1">AI-powered social media analysis</p>
-          </div>
-        </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-24">
+      {/* Error State */}
+      {error && !result && (
+        <Card className="border-destructive/50 card-glass">
+          <CardContent className="flex flex-col items-center justify-center py-12">
             <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-            <p className="text-muted-foreground mb-4">Failed to load sentiment data</p>
-            <Button variant="outline" onClick={() => analyze()}>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button variant="outline" onClick={handleAnalyze}>
               Try Again
             </Button>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Social Sentiment</h1>
-          <p className="text-muted-foreground mt-1">AI-powered social media analysis</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 md:w-60">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search token..."
-              value={searchToken}
-              onChange={(e) => setSearchToken(e.target.value)}
-              className="pl-10"
-              onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-            />
+      {/* Results */}
+      {result && (
+        <>
+          {/* Stats Overview */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-border/50 bg-background/50 stat-glass">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Hash className="h-4 w-4" />
+                  Token Analyzed
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-black tracking-tight">{tokenSymbol}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 bg-background/50 stat-glass">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Trending Topics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-black tracking-tight">{trendingTopics.length}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 bg-background/50 stat-glass">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Twitter className="h-4 w-4" />
+                  Recent Posts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-black tracking-tight">{recentTweets.length}</div>
+              </CardContent>
+            </Card>
           </div>
-          <Button onClick={handleAnalyze} disabled={isAnalyzing}>
-            {isAnalyzing ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Analyze
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
 
-      {/* Overall Sentiment */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-6">
-              <div className={cn(
-                'h-24 w-24 rounded-full flex items-center justify-center',
-                getSentimentBg(overallSentiment) + '/10'
-              )}>
-                <div className="text-center">
-                  <p className={cn('text-3xl font-bold', getSentimentColor(overallSentiment))}>
-                    {(overallSentiment * 100).toFixed(0)}%
-                  </p>
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge
-                    variant={
-                      sentimentLabel === 'positive' || sentimentLabel === 'very_positive'
-                        ? 'success'
-                        : sentimentLabel === 'neutral'
-                          ? 'secondary'
-                          : 'danger'
-                    }
-                  >
-                    {sentimentLabel.replace('_', ' ')}
-                  </Badge>
-                </div>
-                <h3 className="text-xl font-semibold">{activeToken} Sentiment</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Based on {formatCompactNumber(totalVolume)} posts across {platforms.length} platforms
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="text-center">
-                <div className="flex items-center gap-1 justify-center">
-                  <ThumbsUp className="h-4 w-4 text-green-500" />
-                  <span className="text-2xl font-bold">{Math.round(overallSentiment * 100)}%</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Positive</p>
-              </div>
-              <div className="text-center">
-                <div className="flex items-center gap-1 justify-center">
-                  <ThumbsDown className="h-4 w-4 text-red-500" />
-                  <span className="text-2xl font-bold">{Math.round((1 - overallSentiment) * 100)}%</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Negative</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Platform Breakdown & Trending */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Platform Breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Platform Analysis</CardTitle>
-            <CardDescription>Sentiment breakdown by social platform</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {platforms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <MessageSquare className="h-8 w-8 mb-2" />
-                <p>No platform data available</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {platforms.map((platform: PlatformData) => (
-                  <div key={platform.platform}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Twitter className="h-4 w-4" />
-                        <span className="font-medium">{platform.platform}</span>
-                        <Badge variant="secondary" className="text-[10px]">
-                          {formatCompactNumber(platform.volume || 0)} posts
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={cn('font-bold', getSentimentColor(platform.sentiment || 0))}>
-                          {((platform.sentiment || 0) * 100).toFixed(0)}%
-                        </span>
-                        {(platform.change_24h || 0) >= 0 ? (
-                          <TrendingUp className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3 text-red-500" />
-                        )}
-                      </div>
-                    </div>
-                    <Progress
-                      value={(platform.sentiment || 0) * 100}
-                      className="h-2"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Trending Topics */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Trending Topics</CardTitle>
-            <CardDescription>Most discussed topics related to {activeToken}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {trendingTopics.length > 0 ? (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {trendingTopics.map((topic: string) => (
-                  <Badge key={topic} variant="secondary" className="px-3 py-1">
-                    <Hash className="h-3 w-3 mr-1" />
-                    {topic}
-                  </Badge>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-sm mb-6">No trending topics available</p>
-            )}
-            <div className="space-y-4">
-              <h4 className="font-medium text-sm text-muted-foreground">Trending Tokens</h4>
-              {trendingTokens.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No trending tokens data</p>
-              ) : (
-                trendingTokens.map((token: TrendingToken) => (
-                  <div
-                    key={token.symbol}
-                    className="flex items-center gap-4 p-3 rounded-lg border border-border/50"
-                  >
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="font-bold text-primary text-xs">{token.symbol.slice(0, 2)}</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{token.symbol}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatCompactNumber(token.mentions || 0)} mentions
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={cn('font-bold', getSentimentColor(token.sentiment || 0))}>
-                        {((token.sentiment || 0) * 100).toFixed(0)}%
-                      </p>
-                      <div className="flex items-center justify-end gap-1">
-                        {(token.change || 0) >= 0 ? (
-                          <TrendingUp className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3 text-red-500" />
-                        )}
-                        <span className={cn('text-xs', (token.change || 0) >= 0 ? 'text-green-500' : 'text-red-500')}>
-                          {(token.change || 0) >= 0 ? '+' : ''}{token.change || 0}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Posts */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Posts</CardTitle>
-          <CardDescription>Latest social media mentions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[400px]">
-            {recentPosts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <MessageSquare className="h-8 w-8 mb-2" />
-                <p>No recent posts available</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {recentPosts.map((post: RecentPost, index: number) => (
-                  <div
-                    key={index}
-                    className="p-4 rounded-lg border border-border/50"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className={cn(
-                        'h-8 w-8 rounded-full flex items-center justify-center',
-                        post.sentiment === 'positive' ? 'bg-green-500/10' :
-                          post.sentiment === 'negative' ? 'bg-red-500/10' : 'bg-gray-500/10'
-                      )}>
-                        {post.sentiment === 'positive' ? (
-                          <ThumbsUp className="h-4 w-4 text-green-500" />
-                        ) : post.sentiment === 'negative' ? (
-                          <ThumbsDown className="h-4 w-4 text-red-500" />
-                        ) : (
-                          <Minus className="h-4 w-4 text-gray-500" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{post.author}</span>
-                          <Badge variant="secondary" className="text-[10px]">
-                            {post.platform}
+          {/* Trending Topics */}
+          <Card className="border-border/50 bg-background/50 card-glass">
+            <CardHeader>
+              <CardTitle className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Trending Narratives
+              </CardTitle>
+              <CardDescription>Top discussions ranked by engagement score</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[400px]">
+                {trendingTopics.length > 0 ? (
+                  <div className="space-y-4">
+                    {trendingTopics.map((topic, index) => (
+                      <div key={index} className="p-4 rounded-xl border border-border/50 bg-muted/20 list-item-glass">
+                        <div className="flex items-start gap-3">
+                          <Badge className="shrink-0 bg-primary/10 text-primary border-primary/20">
+                            #{index + 1}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">{post.time}</span>
+                          <div className="flex-1 space-y-2">
+                            <p className="text-sm leading-relaxed text-foreground">{topic.text}</p>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" />
+                                <span className="font-bold">Score: {topic.score}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-sm">{post.content}</p>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <MessageSquare className="h-12 w-12 mb-4 opacity-20" />
+                    <p>No trending topics found</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Recent Tweets */}
+          <Card className="border-border/50 bg-background/50 card-glass">
+            <CardHeader>
+              <CardTitle className="text-sm font-black uppercase tracking-tight flex items-center gap-2">
+                <Twitter className="h-4 w-4 text-primary" />
+                Recent Social Activity
+              </CardTitle>
+              <CardDescription>Latest posts and discussions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[500px]">
+                {recentTweets.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentTweets.map((tweet, index) => (
+                      <div key={index} className="p-4 rounded-xl border border-border/50 bg-muted/10 list-item-glass">
+                        {/* Author Info */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-sm">{tweet.author_name}</p>
+                              <Badge variant="secondary" className="text-[9px] h-4">
+                                @{tweet.author_id.slice(0, 8)}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {tweet.author_followers.toLocaleString()} followers
+                            </p>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {new Date(tweet.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        {/* Tweet Content */}
+                        <p className="text-sm leading-relaxed mb-3">{tweet.text}</p>
+
+                        {/* Engagement Stats */}
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border/30">
+                          <div className="flex items-center gap-1">
+                            <Heart className="h-3 w-3" />
+                            <span>{tweet.likes}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Repeat2 className="h-3 w-3" />
+                            <span>{tweet.retweets}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="h-3 w-3" />
+                            <span>{tweet.replies}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Twitter className="h-12 w-12 mb-4 opacity-20" />
+                    <p>No recent activity found</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* Empty State */}
+      {!result && !isLoading && !error && (
+        <Card className="border-border/50 bg-background/50 card-glass">
+          <CardContent className="flex flex-col items-center justify-center py-24">
+            <Sparkles className="h-16 w-16 text-primary/30 mb-4" />
+            <h3 className="text-xl font-bold mb-2">Ready to Analyze</h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              Enter a token symbol above and click Analyze to discover social narratives and trending discussions.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
