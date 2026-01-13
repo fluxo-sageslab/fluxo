@@ -10,17 +10,6 @@ import {
   PortfolioChart,
   TopYields,
 } from '@/components/dashboard';
-const PremiumInsights = dynamic(() => import('@/components/premium').then(mod => mod.PremiumInsights), {
-  ssr: false,
-  loading: () => (
-    <Card className="relative overflow-hidden rounded-3xl border-primary/20">
-      <div className="p-12 flex flex-col items-center justify-center space-y-4">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
-        <p className="text-[10px] font-black uppercase tracking-widest opacity-40 text-center">Loading Alpha Engine...</p>
-      </div>
-    </Card>
-  )
-});
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -349,39 +338,6 @@ export default function DashboardPage() {
           onRefresh={fetchDigest}
         />
         <TopYields yields={yields.slice(0, 5)} loading={(loading || yieldsLoading) && yields === demoYields} title="YIELD NODES" />
-      </div>
-
-      {/* Premium Insights Section */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <PremiumInsights />
-        <Card className="relative overflow-hidden border-border/50 bg-background/50 rounded-3xl">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full" />
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
-              <Shield className="h-4 w-4" />
-              INFRA OVERSIGHT
-            </CardTitle>
-            <CardDescription className="text-[10px] font-bold">Node persistence and security metrics</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 font-[family-name:var(--font-vt323)]">
-              {[
-                { label: 'Network Integration', value: 'Mantle Mainnet', status: 'verified' },
-                { label: 'Security Clearance', value: 'High Level', status: 'secure' },
-                { label: 'Data Latency', value: '< 2.4s', status: 'optimal' },
-                { label: 'Wallet Persistence', value: 'Active Monitoring', status: 'live' }
-              ].map((node) => (
-                <div key={node.label} className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-muted/20 group hover:bg-primary/5 transition-all">
-                  <span className="text-xl uppercase tracking-widest text-muted-foreground opacity-60">{node.label}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl uppercase text-primary">{node.value}</span>
-                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

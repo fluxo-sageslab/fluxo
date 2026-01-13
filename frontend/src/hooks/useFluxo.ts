@@ -329,34 +329,39 @@ export function useRiskAnalysis(walletAddress?: string) {
 
 // ============= useSocialSentiment Hook =============
 
-export function useSocialSentiment() {
+export function useSocialSentiment(tokenSymbol?: string) {
   const [sentiment, setSentiment] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSentiment = useCallback(async () => {
+  const fetchSentiment = useCallback(async (symbol?: string) => {
+    const token = symbol || tokenSymbol || 'MNT'; // Default to MNT if no symbol provided
     setIsLoading(true);
+    setError(null);
     try {
-      const response = await api.social.analyze();
+      // Call narratives endpoint with token symbol
+      const response = await api.social.narratives(token);
       const data = response.data as any;
+
       if (data?.task_id) {
+        // Poll for results
         const result = await pollTaskStatus(
           api.social.getStatus,
           data.task_id,
           { interval: 2000, timeout: 60000 }
         );
-        setSentiment(result);
+
+        // Extract the nested result from the response
+        const narrativesData = (result as any)?.result || result;
+        setSentiment(narrativesData);
       }
     } catch (err) {
+      console.error('Social Sentiment Error:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch social sentiment');
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchSentiment();
-  }, [fetchSentiment]);
+  }, [tokenSymbol]);
 
   return { sentiment, isLoading, error, refetch: fetchSentiment };
 }
@@ -392,4 +397,46 @@ export function useMarketData() {
   }, [fetchMarket]);
 
   return { marketData, isLoading, error, refetch: fetchMarket };
+}
+
+// ============= useProtocols Hook =============
+
+export function useProtocols() {
+  const [protocols, setProtocols] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProtocols = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Call protocols endpoint
+      const response = await api.onchain.protocols();
+      const data = response.data as any;
+
+      if (data?.task_id) {
+        // Poll for results
+        const result = await pollTaskStatus(
+          api.onchain.getStatus,
+          data.task_id,
+          { interval: 2000, timeout: 60000 }
+        );
+
+        // Extract the protocol array from the result
+        const protocolData = (result as any)?.result || result || [];
+        setProtocols(Array.isArray(protocolData) ? protocolData : []);
+      }
+    } catch (err) {
+      console.error('Protocols Error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch protocols');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProtocols();
+  }, [fetchProtocols]);
+
+  return { protocols, isLoading, error, refetch: fetchProtocols };
 }

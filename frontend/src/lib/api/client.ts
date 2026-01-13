@@ -152,27 +152,46 @@ class APIClient {
     return response.json();
   }
 
-  async get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
-    return this.request<T>(endpoint, { method: 'GET', params });
+  async get<T>(
+    endpoint: string,
+    params?: Record<string, string | number | boolean | undefined>,
+    config?: Omit<RequestConfig, 'params' | 'method'>
+  ): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET', params, ...config });
   }
 
-  async post<T>(endpoint: string, data?: unknown, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
+  async post<T>(
+    endpoint: string,
+    data?: unknown,
+    params?: Record<string, string | number | boolean | undefined>,
+    config?: Omit<RequestConfig, 'params' | 'method' | 'body'>
+  ): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
       params,
+      ...config,
     });
   }
 
-  async put<T>(endpoint: string, data?: unknown): Promise<T> {
+  async put<T>(
+    endpoint: string,
+    data?: unknown,
+    config?: Omit<RequestConfig, 'params' | 'method' | 'body'>
+  ): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
+      ...config,
     });
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'DELETE' });
+  async delete<T>(
+    endpoint: string,
+    params?: Record<string, string | number | boolean | undefined>,
+    config?: Omit<RequestConfig, 'params' | 'method'>
+  ): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE', params, ...config });
   }
 }
 
@@ -253,12 +272,15 @@ export const api = {
 
   // Social Sentiment
   social: {
+    // Initiate narrative analysis for a token (returns task_id)
+    narratives: (tokenSymbol: string) => apiClient.get<APIResponse>(`/agent/narratives/${tokenSymbol}`),
+    // Get status/results for a task
+    getStatus: (taskId: string) => apiClient.get<TaskStatus>(`/agent/status/${taskId}`),
+    // Legacy endpoints (keep for compatibility)
     analyze: (timeframe: string = '24h') =>
       apiClient.post<APIResponse>('/agent/social/analyze', null, { timeframe }),
-    getStatus: (taskId: string) => apiClient.get<TaskStatus>(`/agent/social/status/${taskId}`),
     sentiment: (tokenSymbol: string) =>
       apiClient.post<APIResponse>('/agent/social/sentiment', null, { token_symbol: tokenSymbol }),
-    narratives: (tokenSymbol: string) => apiClient.get<APIResponse>(`/agent/social/narratives/${tokenSymbol}`),
     platforms: (tokenSymbol: string) =>
       apiClient.get<APIResponse>(`/agent/social/platforms/${tokenSymbol}`),
     supportedPlatforms: () => apiClient.get<APIResponse>('/agent/social/supported-platforms'),
@@ -337,11 +359,11 @@ export const api = {
 
   // Yield Intelligence
   yield: {
-    start: () => apiClient.get<TaskResponse>('/agent/yield', {
+    start: () => apiClient.get<TaskResponse>('/agent/yield', undefined, {
       cache: 'no-store',
       next: { revalidate: 0 }
     }),
-    getStatus: (taskId: string) => apiClient.get<TaskStatus<any[]>>(`/agent/yield/status/${taskId}`, {
+    getStatus: (taskId: string) => apiClient.get<TaskStatus<any[]>>(`/agent/yield/status/${taskId}`, undefined, {
       cache: 'no-store',
       next: { revalidate: 0 }
     }),

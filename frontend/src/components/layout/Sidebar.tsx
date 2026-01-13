@@ -16,6 +16,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Lock,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -65,15 +67,19 @@ const mainNavItems: NavItem[] = [
     href: '/onchain',
     icon: <Activity className="h-5 w-5" />,
   },
-];
-
-const bottomNavItems: NavItem[] = [
   {
-    title: 'Settings',
-    href: '/settings',
-    icon: <Settings className="h-5 w-5" />,
+    title: 'Exchange',
+    href: '/exchange',
+    icon: <ArrowLeftRight className="h-5 w-5" />,
+  },
+  {
+    title: 'Sovereign Shield',
+    href: '/shield',
+    icon: <Lock className="h-5 w-5" />,
   },
 ];
+
+const bottomNavItems: NavItem[] = [];
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -145,25 +151,10 @@ export function Sidebar() {
 
         <Separator className="bg-[#8E3CC8]/20" />
 
+
         {/* Bottom Navigation */}
         <div className="px-3 py-4 space-y-1">
-          {bottomNavItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                pathname === item.href
-                  ? 'bg-[#5B1A8B]/15 text-[#C77DFF] border-l-2 border-[#8E3CC8]'
-                  : 'text-muted-foreground hover:bg-[#8E3CC8]/10 hover:text-[#C77DFF]',
-                collapsed && 'justify-center px-2'
-              )}
-            >
-              {item.icon}
-              {!collapsed && <span>{item.title}</span>}
-            </Link>
-          ))}
-
+          {/* Settings Removed */}
           {/* Collapse Button */}
           <Button
             variant="ghost"
@@ -182,6 +173,6 @@ export function Sidebar() {
           </Button>
         </div>
       </div>
-    </aside>
+    </aside >
   );
 }
